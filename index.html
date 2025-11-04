@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Just the Recipe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .input-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        input[type="url"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .recipe-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .recipe-container.visible {
+            display: block;
+        }
+        
+        .recipe-title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .recipe-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .recipe-meta {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .recipe-meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .recipe-meta-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        
+        .recipe-meta-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .recipe-section {
+            margin-bottom: 25px;
+        }
+        
+        .recipe-section h2 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 8px;
+        }
+        
+        .ingredients-list, .instructions-list {
+            list-style-position: inside;
+            line-height: 1.8;
+        }
+        
+        .ingredients-list li {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .instructions-list li {
+            padding: 12px;
+            margin-bottom: 8px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #f5c6cb;
+            display: none;
+        }
+        
+        .error.visible {
+            display: block;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .loading.visible {
+            display: block;
+        }
+        
+        .json-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #ddd;
+        }
+        
+        .json-section h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        
+        .json-container {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+        }
+        
+        .json-container pre {
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h1>Just the Recipe</h1>
+    
+    <div class="input-section">
+        <div class="input-group">
+            <input 
+                type="url" 
+                id="recipeUrl" 
+                placeholder="Paste recipe URL here..." 
+                required
+            >
+            <button id="extractBtn">Extract Recipe</button>
+        </div>
+    </div>
+    
+    <div class="error" id="errorMsg"></div>
+    <div class="loading" id="loading">Loading recipe...</div>
+    
+    <div class="recipe-container" id="recipeContainer">
+        <h1 class="recipe-title" id="recipeTitle"></h1>
+        <p class="recipe-description" id="recipeDescription"></p>
+        
+        <div class="recipe-meta" id="recipeMeta"></div>
+        
+        <div class="recipe-section" id="ingredientsSection" style="display: none;">
+            <h2>Ingredients</h2>
+            <ul class="ingredients-list" id="ingredientsList"></ul>
+        </div>
+        
+        <div class="recipe-section" id="instructionsSection" style="display: none;">
+            <h2>Instructions</h2>
+            <ol class="instructions-list" id="instructionsList"></ol>
+        </div>
+        
+        <div class="json-section" id="jsonSection" style="display: none;">
+            <h2>Raw JSON-LD Data</h2>
+            <div class="json-container">
+                <pre id="jsonDisplay"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('extractBtn').addEventListener('click', extractRecipe);
+        document.getElementById('recipeUrl').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                extractRecipe();
+            }
+        });
+
+        async function extractRecipe() {
+            const urlInput = document.getElementById('recipeUrl');
+            const url = urlInput.value.trim();
+            
+            if (!url) {
+                showError('Please enter a URL');
+                return;
+            }
+            
+            // Hide previous results
+            document.getElementById('recipeContainer').classList.remove('visible');
+            document.getElementById('errorMsg').classList.remove('visible');
+            document.getElementById('loading').classList.add('visible');
+            document.getElementById('extractBtn').disabled = true;
+            
+            try {
+                // Fetch the webpage
+                const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch the webpage');
+                }
+                
+                const html = await response.text();
+                
+                // Parse the HTML
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Look for JSON-LD script tags with Recipe schema
+                const scripts = doc.querySelectorAll('script[type="application/ld+json"]');
+                let recipeData = null;
+                
+                for (let script of scripts) {
+                    try {
+                        const data = JSON.parse(script.textContent);
+                        
+                        // Handle both single objects and arrays
+                        const items = Array.isArray(data) ? data : [data];
+                        
+                        for (let item of items) {
+                            // Check if this is a Recipe or contains a Recipe in @graph
+                            if (item['@type'] === 'Recipe' || item['@type']?.includes('Recipe')) {
+                                recipeData = item;
+                                break;
+                            } else if (item['@graph']) {
+                                const recipe = item['@graph'].find(g => 
+                                    g['@type'] === 'Recipe' || g['@type']?.includes('Recipe')
+                                );
+                                if (recipe) {
+                                    recipeData = recipe;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (recipeData) break;
+                    } catch (e) {
+                        console.warn('Failed to parse JSON-LD:', e);
+                    }
+                }
+                
+                if (!recipeData) {
+                    throw new Error('No recipe schema found on this page');
+                }
+                
+                displayRecipe(recipeData);
+                
+            } catch (error) {
+                showError(error.message || 'Failed to extract recipe. Make sure the URL contains recipe schema data.');
+            } finally {
+                document.getElementById('loading').classList.remove('visible');
+                document.getElementById('extractBtn').disabled = false;
+            }
+        }
+
+        function displayRecipe(recipe) {
+            // Title
+            document.getElementById('recipeTitle').textContent = recipe.name || 'Untitled Recipe';
+            
+            // Description
+            const description = recipe.description || '';
+            const descElement = document.getElementById('recipeDescription');
+            if (description) {
+                descElement.textContent = description;
+                descElement.style.display = 'block';
+            } else {
+                descElement.style.display = 'none';
+            }
+            
+            // Meta information
+            const metaContainer = document.getElementById('recipeMeta');
+            metaContainer.innerHTML = '';
+            
+            if (recipe.prepTime) {
+                addMetaItem(metaContainer, 'Prep Time', formatDuration(recipe.prepTime));
+            }
+            if (recipe.cookTime) {
+                addMetaItem(metaContainer, 'Cook Time', formatDuration(recipe.cookTime));
+            }
+            if (recipe.totalTime) {
+                addMetaItem(metaContainer, 'Total Time', formatDuration(recipe.totalTime));
+            }
+            if (recipe.recipeYield) {
+                addMetaItem(metaContainer, 'Yield', recipe.recipeYield);
+            }
+            if (recipe.recipeCategory) {
+                addMetaItem(metaContainer, 'Category', recipe.recipeCategory);
+            }
+            
+            // Ingredients
+            const ingredientsSection = document.getElementById('ingredientsSection');
+            const ingredientsList = document.getElementById('ingredientsList');
+            ingredientsList.innerHTML = '';
+            
+            if (recipe.recipeIngredient && recipe.recipeIngredient.length > 0) {
+                recipe.recipeIngredient.forEach(ingredient => {
+                    const li = document.createElement('li');
+                    li.textContent = ingredient;
+                    ingredientsList.appendChild(li);
+                });
+                ingredientsSection.style.display = 'block';
+            } else {
+                ingredientsSection.style.display = 'none';
+            }
+            
+            // Instructions
+            const instructionsSection = document.getElementById('instructionsSection');
+            const instructionsList = document.getElementById('instructionsList');
+            instructionsList.innerHTML = '';
+            
+            let instructions = [];
+            
+            if (recipe.recipeInstructions) {
+                if (typeof recipe.recipeInstructions === 'string') {
+                    instructions = [recipe.recipeInstructions];
+                } else if (Array.isArray(recipe.recipeInstructions)) {
+                    instructions = recipe.recipeInstructions.map(instruction => {
+                        if (typeof instruction === 'string') {
+                            return instruction;
+                        } else if (instruction.text) {
+                            return instruction.text;
+                        } else if (instruction['@type'] === 'HowToStep' && instruction.text) {
+                            return instruction.text;
+                        }
+                        return '';
+                    }).filter(i => i);
+                }
+            }
+            
+            if (instructions.length > 0) {
+                instructions.forEach(instruction => {
+                    const li = document.createElement('li');
+                    li.textContent = instruction;
+                    instructionsList.appendChild(li);
+                });
+                instructionsSection.style.display = 'block';
+            } else {
+                instructionsSection.style.display = 'none';
+            }
+            
+            // Show the recipe container
+            document.getElementById('recipeContainer').classList.add('visible');
+            
+            // Display raw JSON-LD
+            const jsonSection = document.getElementById('jsonSection');
+            const jsonDisplay = document.getElementById('jsonDisplay');
+            jsonDisplay.textContent = JSON.stringify(recipe, null, 2);
+            jsonSection.style.display = 'block';
+        }
+
+        function addMetaItem(container, label, value) {
+            if (!value) return;
+            
+            const item = document.createElement('div');
+            item.className = 'recipe-meta-item';
+            
+            const labelEl = document.createElement('div');
+            labelEl.className = 'recipe-meta-label';
+            labelEl.textContent = label;
+            
+            const valueEl = document.createElement('div');
+            valueEl.className = 'recipe-meta-value';
+            valueEl.textContent = value;
+            
+            item.appendChild(labelEl);
+            item.appendChild(valueEl);
+            container.appendChild(item);
+        }
+
+        function formatDuration(duration) {
+            // Convert ISO 8601 duration to readable format
+            if (!duration) return '';
+            
+            const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+            if (!match) return duration;
+            
+            const hours = match[1] ? `${match[1]}h ` : '';
+            const minutes = match[2] ? `${match[2]}m` : '';
+            
+            return (hours + minutes).trim() || duration;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errorMsg');
+            errorEl.textContent = message;
+            errorEl.classList.add('visible');
+        }
+    </script>
+</body>
+</html>
